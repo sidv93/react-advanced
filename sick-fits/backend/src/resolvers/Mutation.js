@@ -8,8 +8,18 @@ const YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 
 const mutations = {
     async createItem(parent, args, ctx, info) {
+        if(!ctx.request.userId) {
+            throw new Error('You must be logged in');
+        }
         const item = await ctx.db.mutation.createItem({
-            data: { ...args }
+            data: {
+                user: {
+                    connect: {
+                        id: ctx.request.userId
+                    }
+                },
+                ...args
+            }
         }, info);
         return item;
     },
