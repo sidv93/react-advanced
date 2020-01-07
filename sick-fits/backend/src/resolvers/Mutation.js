@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { randomBytes } = require('crypto');
 const { promisify } = require('util');
 const { transport, makeEmail } = require('../mail');
+const { hasPermission } = require('../utils');
 
 const YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 
@@ -37,7 +38,14 @@ const mutations = {
 
     async deleteItem(parent, args, ctx, info) {
         const where = { id: args.id };
-        const item = await ctx.db.query.item({ where }, `{ id title}`);
+        const item = await ctx.db.query.item({ where }, `{ id title user { id }}`);
+        const ownsItem = ctx.request.userId === item.user.id;
+        const hasPermissions = ctx.request.user.permissions.some(
+            permission => ['ADMIN', "DELETEITEM"].includes(permission)
+        );
+        if(!ownsItem || !hasPermissions) {
+            throw new Error('You do not have permission to delete');
+        }
         return ctx.db.mutation.deleteItem({ where }, info);
     },
 
@@ -141,6 +149,29 @@ const mutations = {
         });
 
         return updatedUser;
+    },
+
+    async updatePermissions(parent, args, ctx, info) {
+        if(!ctx.request.userId) {
+            throw new Error('You have to be logged in');
+        }
+
+        const user = await ctx.db.query.user({
+            where: { id: ctx.request.userId }
+        }, info);
+
+        hasPermission(user, ['ADMIN', 'PERMISSIONUPDATE']);
+
+        return ctx.db.mutation.updateUser({
+            data: {
+                permissions: {
+                    set: args.permissions
+                }
+            },
+            where: {
+                id: args.userId
+            }
+        }, info);
     }
 };
 
