@@ -8,7 +8,7 @@ import { perPage } from '../config';
 
 const ALL_ITEMS_QUERY = gql`
     query ALL_ITEMS_QUERY($skip: Int = 0, $first: Int = ${perPage}) {
-        items(skip: $skip, first: $first, orderBy: createdAt_DESC) {
+        items(skip: $skip, first: $first) {
             id
             title
             description
